@@ -6,6 +6,10 @@ import numpy
 import models
 
 class TestCosSum(unittest.TestCase):
+  '''A sanity test of the CosSum functionality. This mostly just makes sure that
+  converting between line_line and phase values gives the same result both
+  directions.'''
+
   def assertEqualRotated(self, a, b):
     '''Asserts that two functions (a and b) which are periodic with a period
     which divides 2*pi are equal after rotation by some reasonable number.'''

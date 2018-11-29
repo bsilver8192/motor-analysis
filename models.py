@@ -57,10 +57,21 @@ class Motor(object):
 
   Flux linkages are represented as a mapping from a to (b, c) such that the
   final function is $\sum b * cos(a * \theta + c)$.
+
+  The advertised_* numbers are the ones from the manufacturer, or some other
+  source. They should not be used for any calculations, because it's unclear
+  which kinds of currents and voltages they're using.
+
+  electrical_ratio is the number of electrical rotations per mechanical one.
+  It doesn't affect any electrical calculations, but it is useful for
+  calculating mechanical gear ratios etc.
   '''
   def __init__(self,
                phase_resistance = None, line_line_resistance = None,
-               line_line_f = None):
+               line_line_f = None,
+               advertised_rpm = None, advertised_voltage = None,
+               advertised_kv = None,
+               electrical_ratio = 1):
     '''Callers must specify each quantity in exactly one way.
 
     phase_resistance is the resistance of one phase.
@@ -70,11 +81,28 @@ class Motor(object):
     '''
     if phase_resistance is not None:
       self._resistance = phase_resistance
-    if line_line_resistance is not None:
+    elif line_line_resistance is not None:
       self._resistance = line_line_resistance / 2
+    else:
+      raise ValueError('Must specify the resistance')
 
     if line_line_f is not None:
-      self._f = CosSum(line_line_f)
+      self._f = CosSum(line_line = line_line_f)
+    else:
+      raise ValueError('Must specify the flux linkage')
+
+    rpm_to_omega = numpy.pi * 2 / 60 * electrical_ratio
+    if advertised_rpm is not None:
+      self._advertised_omega = advertised_rpm * rpm_to_omega
+    else:
+      self._advertised_omega = None
+    self._advertised_voltage = advertised_voltage
+    if advertised_kv is not None:
+      self._advertised_kv = advertised_kv * rpm_to_omega
+    else:
+      self._advertised_kv = None
+
+    self._electrical_ratio = electrical_ratio
 
   @property
   def f(self):
@@ -88,6 +116,19 @@ class Motor(object):
   def resistance(self):
     return self.resistance
 
+  @property
+  def advertised_kv(self):
+    if self._advertised_kv is not None:
+      return self._advertised_kv
+    if (self._advertised_omega is not None and
+        self._advertised_voltage is not None):
+      return self._advertised_omega / self._advertised_voltage
+    return None
+
+  @property
+  def electrical_ratio(self):
+    return self._electrical_ratio
+
 def _cos_harmonic(cos_scalar, harmonic_scalar, harmonic_index, harmonic_offset):
   def r(theta):
     return (cos_scalar * numpy.cos(theta) +
@@ -96,8 +137,14 @@ def _cos_harmonic(cos_scalar, harmonic_scalar, harmonic_index, harmonic_offset):
   return r
 
 BOMA = Motor(line_line_resistance = 0.638 / 3.77,
-             line_line_f = {1: (0.033826, 0), 7: (0.003439, 1.5707960)})
+             line_line_f = {1: (0.033826, 0), 7: (0.003439, 1.5707960)},
+             advertised_rpm = 4800, advertised_voltage = 48,
+             electrical_ratio = 3)
 MY1020 = Motor(line_line_resistance = 0.650 / 3.77,
-               line_line_f = {1: (0.032025, 0), 7: (0.002429, 1.047198)})
+               line_line_f = {1: (0.032025, 0), 7: (0.002429, 1.047198)},
+               advertised_rpm = 4500, advertised_voltage = 48,
+               electrical_ratio = 3)
 T20 = Motor(phase_resistance = 0.0079,
-            line_line_f = {1: (0.006595, 0), 5: (0.000970, -1.570796)})
+            line_line_f = {1: (0.006595, 0), 5: (0.000970, -1.570796)},
+            advertised_kv = 730, advertised_voltage = 41,
+            electrical_ratio = 2)
