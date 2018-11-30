@@ -20,4 +20,4 @@ with open(sys.argv[1], 'r') as in_file:
         start_time = float(row[0])
       relative_time = float(row[0]) - start_time
       voltage_a, voltage_b = float(row[1]), float(row[2])
-      writer.writerow(('{0:.5f}'.format(relative_time), voltage_a - voltage_b))
+      writer.writerow(('{0:.6f}'.format(relative_time), voltage_a - voltage_b))

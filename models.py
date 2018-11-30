@@ -145,6 +145,6 @@ MY1020 = Motor(line_line_resistance = 0.650 / 3.77,
                advertised_rpm = 4500, advertised_voltage = 48,
                electrical_ratio = 3)
 T20 = Motor(phase_resistance = 0.0079,
-            line_line_f = {1: (0.006595, 0), 5: (0.000970, -1.570796)},
+            line_line_f = {1: (0.006608, 0), 5: (0.000971, -1.570796)},
             advertised_kv = 730, advertised_voltage = 41,
             electrical_ratio = 2)
