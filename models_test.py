@@ -5,7 +5,26 @@ import numpy
 
 import models
 
-class TestCosSum(unittest.TestCase):
+class TestCase(unittest.TestCase):
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+
+    self._epsilon = numpy.pi / 500
+    self._theta = numpy.arange(0, numpy.pi * 2, self.epsilon) + self.epsilon / 2
+
+  @property
+  def epsilon(self):
+    return self._epsilon
+
+  @property
+  def theta(self):
+    return self._theta
+
+  def assertFClose(self, a, b, offset=0):
+    if not numpy.allclose(a(self.theta), b(self.theta + offset)):
+      raise AssertionError('%r != %r' % (a, b))
+
+class TestCosSum(TestCase):
   '''A sanity test of the CosSum functionality. This mostly just makes sure that
   converting between line_line and phase values gives the same result both
   directions.'''
@@ -14,13 +33,11 @@ class TestCosSum(unittest.TestCase):
     '''Asserts that two functions (a and b) which are periodic with a period
     which divides 2*pi are equal after rotation by some reasonable number.'''
 
-    theta = numpy.arange(0, numpy.pi * 2, 0.01)
-    epsilon = 0.000001
     # First verify they're both periodic.
-    self.assertTrue((abs(a(theta) - a(theta + numpy.pi * 2)) < epsilon).all())
-    self.assertTrue((abs(b(theta) - b(theta + numpy.pi * 2)) < epsilon).all())
+    self.assertFClose(a, a, numpy.pi * 2)
+    self.assertFClose(b, b, numpy.pi * 2)
     for angle in numpy.arange(0, numpy.pi * 2, numpy.pi / 6):
-      if ((abs(a(theta) - b(theta + angle)) < epsilon).all()):
+      if ((abs(a(self.theta) - b(self.theta + angle)) < self.epsilon).all()):
         return
     self.fail('Did not find a way these functions are equal: %s vs %s' % (a, b))
 
