@@ -155,6 +155,75 @@ def _cos_harmonic(cos_scalar, harmonic_scalar, harmonic_index, harmonic_offset):
                 theta * harmonic_index + harmonic_offset))
   return r
 
+def _trapezoid(theta):
+  '''A trapezoid with 120-degree flat regions.
+
+  This is the ideal flux linkage for a trapezoidal motor.'''
+  one_sixth = numpy.pi / 3
+  theta = (theta - one_sixth / 2) % (numpy.pi * 2)
+  if theta < one_sixth * 2:
+    return 1
+  elif theta < one_sixth * 3:
+    return (theta - one_sixth * 2.5) / one_sixth * -2
+  elif theta < one_sixth * 5:
+    return -1
+  else:
+    return (theta - one_sixth * 5.5) / one_sixth * 2
+trapezoid = _vectorize_float(_trapezoid)
+
+def _trapezoid_6step(theta):
+  '''A 6-step "trapezoid".
+
+  When people talk about "trapezoidal commutation", they usually mean this as
+  the idealized phase current waveform.'''
+  one_sixth = numpy.pi / 3
+  theta = theta % (numpy.pi * 2)
+  if theta < one_sixth * 1:
+    return 0.5
+  elif theta < one_sixth * 2:
+    return 1
+  elif theta < one_sixth * 3:
+    return 0.5
+  elif theta < one_sixth * 4:
+    return -0.5
+  elif theta < one_sixth * 5:
+    return -1
+  else:
+    return -0.5
+trapezoid_6step = _vectorize_float(_trapezoid_6step)
+
+def _trapezoid_4step(theta):
+  '''A 4-step kind-of-trapezoid. This only has the 120-degree flat regions, and
+  0 elsewhere.
+
+  Some people call this a "modified square wave", and others call it
+  "trapezoidal".
+  When people talk about "trapezoidal commutation", they  usually mean this as
+  the phase voltage waveform.'''
+  one_sixth = numpy.pi / 3
+  theta = (theta - one_sixth / 2) % (numpy.pi * 2)
+  if theta < one_sixth * 2:
+    return 1
+  elif theta < one_sixth * 3:
+    return 0
+  elif theta < one_sixth * 5:
+    return -1
+  else:
+    return 0
+trapezoid_4step = _vectorize_float(_trapezoid_4step)
+
+def _square(theta):
+  '''A 2-step square wave.
+
+  This is a really crude commutation scheme. Not many people talk about actually
+  using it.'''
+  theta = theta % (numpy.pi * 2)
+  if theta < numpy.pi:
+    return 1
+  else:
+    return -1
+square = _vectorize_float(_square)
+
 # TODO(Brian): Actually measure the inductance.
 BOMA = Motor(line_line_resistance = 0.638 / 3.77,
              line_line_self_inductance = 0.38e-3,
