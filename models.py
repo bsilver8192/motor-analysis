@@ -51,12 +51,18 @@ class CosSum(object):
 class Motor(object):
   '''Represents one type of motor.
 
+  This currently only supports motors with flux linkages which are well-modeled
+  as sums of sinusoids, but the API is designed to support other shapes in the
+  future too.
+
   All internal constants are phase-neutral. All angles are electrical radians.
   All constants are in standard SI units (specifically: volts, seconds,
   newton*meters, amps, and ohms).
 
-  Flux linkages are represented as a mapping from a to (b, c) such that the
-  final function is $\sum b * cos(a * \theta + c)$.
+  The mutual inductance is assumed to be negligible.
+
+  Flux linkage coefficients are represented as a mapping from a to (b, c) such
+  that the final function is $\sum b * cos(a * \theta + c)$.
 
   The advertised_* numbers are the ones from the manufacturer, or some other
   source. They should not be used for any calculations, because it's unclear
@@ -68,7 +74,8 @@ class Motor(object):
   '''
   def __init__(self,
                phase_resistance = None, line_line_resistance = None,
-               line_line_f = None,
+               line_line_f_coeff = None,
+               phase_self_inductance = None, line_line_self_inductance = None,
                advertised_rpm = None, advertised_voltage = None,
                advertised_kv = None,
                electrical_ratio = 1):
@@ -76,8 +83,9 @@ class Motor(object):
 
     phase_resistance is the resistance of one phase.
     line_line_resistance is the resistance in one phase and out another.
-    line_line_f is the flux linkage (derivative) function between
-      two phases, in V/(rad/s) aka N*m/A.
+    line_line_self_inductance is the inductance in one phase and out another.
+    line_line_f_coeff is the coefficients for the flux linkage (derivative)
+      function between two phases, in V/(rad/s) aka N*m/A.
     '''
     if phase_resistance is not None:
       self._resistance = phase_resistance
@@ -86,8 +94,15 @@ class Motor(object):
     else:
       raise ValueError('Must specify the resistance')
 
-    if line_line_f is not None:
-      self._f = CosSum(line_line = line_line_f)
+    if phase_self_inductance is not None:
+      self._self_inductance = phase_self_inductance
+    elif line_line_self_inductance is not None:
+      self._self_inductance = line_line_self_inductance / 2
+    else:
+      raise ValueError('Must specify the inductance')
+
+    if line_line_f_coeff is not None:
+      self._f = CosSum(line_line = line_line_f_coeff)
     else:
       raise ValueError('Must specify the flux linkage')
 
@@ -114,7 +129,11 @@ class Motor(object):
 
   @property
   def resistance(self):
-    return self.resistance
+    return self._resistance
+
+  @property
+  def self_inductance(self):
+    return self._self_inductance
 
   @property
   def advertised_kv(self):
@@ -136,15 +155,21 @@ def _cos_harmonic(cos_scalar, harmonic_scalar, harmonic_index, harmonic_offset):
                 theta * harmonic_index + harmonic_offset))
   return r
 
+# TODO(Brian): Actually measure the inductance.
 BOMA = Motor(line_line_resistance = 0.638 / 3.77,
-             line_line_f = {1: (0.033826, 0), 7: (0.003439, 1.5707960)},
+             line_line_self_inductance = 0.38e-3,
+             line_line_f_coeff = {1: (0.033826, 0), 7: (0.003439, 1.5707960)},
              advertised_rpm = 4800, advertised_voltage = 48,
              electrical_ratio = 3)
+# TODO(Brian): Actually measure the inductance.
 MY1020 = Motor(line_line_resistance = 0.650 / 3.77,
-               line_line_f = {1: (0.032025, 0), 7: (0.002429, 1.047198)},
+               line_line_self_inductance = 0.38e-3,
+               line_line_f_coeff = {1: (0.032025, 0), 7: (0.002429, 1.047198)},
                advertised_rpm = 4500, advertised_voltage = 48,
                electrical_ratio = 3)
-T20 = Motor(phase_resistance = 0.0079,
-            line_line_f = {1: (0.006608, 0), 5: (0.000971, -1.570796)},
+# TODO(Brian): Verify resistance and inductance on a power supply.
+T20 = Motor(phase_resistance = 0.0065,
+            phase_self_inductance = 5.0e-6,
+            line_line_f_coeff = {1: (0.006608, 0), 5: (0.000971, -1.570796)},
             advertised_kv = 730, advertised_voltage = 41,
             electrical_ratio = 2)
