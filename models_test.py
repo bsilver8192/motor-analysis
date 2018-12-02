@@ -90,6 +90,30 @@ class TestCosSum(TestCase):
     self.check_phase_line_line_conversions({1: (1, 0), 5: (0.5, 0.23),
                                             7: (0.1, 0.3)})
 
+  def test_symmetries(self):
+    for coeff in ({1: (1, -numpy.pi / 2)}, {1: (0.01, -numpy.pi / 2)},
+                  {1: (1, -numpy.pi / 2), 5: (0.05, -numpy.pi / 2)},
+                  {1: (1, -numpy.pi / 2), 7: (0.05, -numpy.pi / 2)},
+                  {1: (1, -numpy.pi / 2), 7: (0.05, numpy.pi / 2)}):
+      with self.subTest('symmetries', coeff=coeff):
+        cos_sum = models.CosSum(phase=coeff)
+        for f in (cos_sum.phase, cos_sum.line_line):
+          with self.subTest('isPeriodic', f=f):
+            self.assertFClose(f, f, numpy.pi * 2)
+            self.assertFClose(f, f, numpy.pi * 4)
+          with self.subTest('isOddSymmetric', f=f):
+            # Note that this deliberately verifies it has odd symmetry about pi,
+            # and not some other point.
+            self.assertFClose(f, lambda t: -f(numpy.pi * 2 - t))
+          # We don't actually need the waveform to have zeros. We just need it
+          # to average zero about the interesting points, to make sure it's
+          # properly aligned.
+          for point in (0, numpy.pi, numpy.pi * 2):
+            with self.subTest('zeros', f=f, point=point):
+              before = f(point - self.epsilon)
+              after = f(point + self.epsilon)
+              self.assertAlmostEqual((before + after) / 2, 0)
+
 class TestWaveforms(TestCase):
   '''A sanity test of various commutation patterns we define. This verifies
   they are continuous and all three phases add up to a constant.
