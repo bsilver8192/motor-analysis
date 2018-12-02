@@ -89,21 +89,21 @@ cycle_time = max(cycle_x)
 coefficients = list(sorted(numpy.argpartition(abs(fft), -number_coefficients)[-number_coefficients:]))
 assert coefficients[0] == 1
 f_scale = 1 / (len(cycle_x) / 2)
-linkage_message = 'Flux linkage = %f * cos(theta)' % (abs(fft[1]) * f_scale / omega)
+zero_scalar = abs(fft[1]) * f_scale
+linkage_message = 'Flux linkage = %.8f * cos(theta)' % (zero_scalar / omega)
 zero_angle = numpy.angle(fft[1])
 cos_arg = 2 * numpy.pi * cycle_x / cycle_time - zero_angle
-f = abs(fft[1]) * numpy.cos(cos_arg + zero_angle)
+f = zero_scalar * numpy.cos(cos_arg + zero_angle)
 f_rounded = numpy.copy(f)
 for coefficient in coefficients[1:]:
-  scalar = abs(fft[coefficient])
+  scalar = abs(fft[coefficient]) * f_scale
   angle = numpy.angle(fft[coefficient])
-  rounded_angle = round_angle(angle)
-  linkage_message += ' + %f * cos(%d * theta + %f)' % (
-      scalar * f_scale / omega, coefficient, rounded_angle)
+  rounded_angle = round_angle(angle - zero_angle * coefficient) + zero_angle * coefficient
+  linkage_message += ' + %.8f * cos(%d * theta + %f)' % (
+      scalar / omega, coefficient,
+      (rounded_angle - zero_angle * coefficient) % (numpy.pi * 2))
   f += scalar * numpy.cos(cos_arg * coefficient + angle)
   f_rounded += scalar * numpy.cos(cos_arg * coefficient + rounded_angle)
-f *= f_scale
-f_rounded *= f_scale
 linkage_message += ' V/(rad/s) aka N*m/A'
 print(linkage_message)
 

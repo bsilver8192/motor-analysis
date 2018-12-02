@@ -290,18 +290,18 @@ def make_sin_constant(coeff):
 # TODO(Brian): Actually measure the inductance.
 BOMA = Motor(line_line_resistance = 0.638 / 3.77,
              line_line_self_inductance = 0.38e-3,
-             line_line_f_coeff = {1: (0.033826, 0), 7: (0.003439, numpy.pi / 2)},
+             line_line_f_coeff = {1: (0.03382623, 0), 7: (0.00343913, 0)},
              advertised_rpm = 4800, advertised_voltage = 48,
              electrical_ratio = 3)
 # TODO(Brian): Actually measure the inductance.
 MY1020 = Motor(line_line_resistance = 0.650 / 3.77,
                line_line_self_inductance = 0.38e-3,
-               line_line_f_coeff = {1: (0.032025, 0), 7: (0.002429, numpy.pi / 3)},
+               line_line_f_coeff = {1: (0.03202452, 0), 7: (0.00242868, 0)},
                advertised_rpm = 4500, advertised_voltage = 48,
                electrical_ratio = 3)
 # TODO(Brian): Verify resistance and inductance on a power supply.
 T20 = Motor(phase_resistance = 0.0065,
             phase_self_inductance = 5.0e-6,
-            line_line_f_coeff = {1: (0.006608, 0), 5: (0.000971, numpy.pi / -2)},
+            line_line_f_coeff = {1: (0.00660802, 0), 5: (0.00097149, 0)},
             advertised_kv = 730, advertised_voltage = 41,
             electrical_ratio = 2)
