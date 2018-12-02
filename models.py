@@ -1,23 +1,38 @@
 import numpy
+import scipy.optimize
+import types
+
+_frozendict = types.MappingProxyType
 
 def _vectorize_float(f):
   return numpy.vectorize(f, otypes=(numpy.float,))
+
+def _offset_coeff(coeff):
+  coeff = dict(coeff)
+  offset = -numpy.pi / 2 - coeff[1][1]
+  for i in coeff:
+    coeff[i] = (coeff[i][0], coeff[i][1] + offset)
+  return coeff
 
 class CosSum(object):
   def __init__(self,
                line_line = None, phase = None):
     if phase is not None:
-      self._phase_coeff = phase
-      self._line_line_coeff = {a: (phase[a][0] * numpy.sqrt(3), phase[a][1])
-                               for a in phase}
+      self._phase_coeff = _frozendict(_offset_coeff(phase))
+      self._line_line_coeff = _frozendict(
+          {a: (self.phase_coeff[a][0] * numpy.sqrt(3),
+               self.phase_coeff[a][1])
+           for a in self.phase_coeff})
 
     if line_line is not None:
-      self._line_line_coeff = line_line
-      self._phase_coeff = {a: (line_line[a][0] / numpy.sqrt(3), line_line[a][1])
-                           for a in line_line}
+      self._line_line_coeff = _frozendict(_offset_coeff(line_line))
+      self._phase_coeff = _frozendict(
+          {a: (self.line_line_coeff[a][0] / numpy.sqrt(3),
+               self.line_line_coeff[a][1])
+           for a in self.line_line_coeff})
 
-    self._phase = CosSum._make_function(self._phase_coeff)
-    self._line_line = CosSum._make_function(self._line_line_coeff)
+    self._phase = CosSum.make_function(self._phase_coeff)
+    self._line_line = CosSum.make_function(self._line_line_coeff)
 
   @property
   def phase(self):
@@ -36,7 +51,7 @@ class CosSum(object):
     return self._line_line_coeff
 
   @staticmethod
-  def _make_function(coeff):
+  def make_function(coeff):
     terms = tuple(CosSum._do_cos(a, *coeff[a]) for a in coeff)
     def r(theta):
       return numpy.sum(term(theta) for term in terms)
@@ -128,6 +143,14 @@ class Motor(object):
     return self._f.line_line
 
   @property
+  def f_coeff(self):
+    return self._f.phase_coeff
+
+  @property
+  def line_line_f_coeff(self):
+    return self._f.line_line_coeff
+
+  @property
   def resistance(self):
     return self._resistance
 
@@ -155,6 +178,34 @@ def _cos_harmonic(cos_scalar, harmonic_scalar, harmonic_index, harmonic_offset):
                 theta * harmonic_index + harmonic_offset))
   return r
 
+class Waveform(object):
+  def __init__(self, scalar_f):
+    self.__doc__ = scalar_f.__doc__
+    self._f = _vectorize_float(scalar_f)
+    one_sixth_min = min(self._f(numpy.arange(0, numpy.pi * 2, numpy.pi / 6)))
+    continuous_min = scipy.optimize.minimize(self._f,
+                                             x0=(numpy.pi * 3 / 2),
+                                             bounds=((numpy.pi, numpy.pi * 2),))
+    assert continuous_min.success
+    global_min = scipy.optimize.differential_evolution(
+        self._f, bounds=((numpy.pi, numpy.pi * 2),), polish=True)
+    assert global_min.success
+    self._min = numpy.array([one_sixth_min,
+                             float(self._f(continuous_min.x[0])),
+                             float(self._f(global_min.x[0])),
+                             ]).min()
+
+  def __call__(self, *args):
+    return self._f(*args)
+
+  @property
+  def min(self):
+    return self._min
+
+  @property
+  def max(self):
+    return -self._min
+
 def _trapezoid(theta):
   '''A trapezoid with 120-degree flat regions.
 
@@ -169,7 +220,7 @@ def _trapezoid(theta):
     return -1
   else:
     return (theta - one_sixth * 5.5) / one_sixth * 2
-trapezoid = _vectorize_float(_trapezoid)
+trapezoid = Waveform(_trapezoid)
 
 def _trapezoid_6step(theta):
   '''A 6-step "trapezoid".
@@ -190,7 +241,7 @@ def _trapezoid_6step(theta):
     return -1
   else:
     return -0.5
-trapezoid_6step = _vectorize_float(_trapezoid_6step)
+trapezoid_6step = Waveform(_trapezoid_6step)
 
 def _trapezoid_4step(theta):
   '''A 4-step kind-of-trapezoid. This only has the 120-degree flat regions, and
@@ -210,7 +261,7 @@ def _trapezoid_4step(theta):
     return -1
   else:
     return 0
-trapezoid_4step = _vectorize_float(_trapezoid_4step)
+trapezoid_4step = Waveform(_trapezoid_4step)
 
 def _square(theta):
   '''A 2-step square wave.
@@ -222,23 +273,35 @@ def _square(theta):
     return 1
   else:
     return -1
-square = _vectorize_float(_square)
+square = Waveform(_square)
+
+sin = Waveform(numpy.sin)
+
+def make_sin_constant(coeff):
+  '''Returns a Waveform which will produce constant torque for the given motor
+  waveform. Passing motor_coeff=Motor.f_coeff often makes sense.'''
+  orig_coeff = _frozendict(coeff)
+  coeff = dict(coeff)
+  assert len(coeff) <= 2
+  for i in sorted(coeff.keys())[1:]:
+    coeff[i] = (-coeff[i][0], coeff[i][1])
+  return Waveform(CosSum.make_function(coeff))
 
 # TODO(Brian): Actually measure the inductance.
 BOMA = Motor(line_line_resistance = 0.638 / 3.77,
              line_line_self_inductance = 0.38e-3,
-             line_line_f_coeff = {1: (0.033826, 0), 7: (0.003439, 1.5707960)},
+             line_line_f_coeff = {1: (0.033826, 0), 7: (0.003439, numpy.pi / 2)},
              advertised_rpm = 4800, advertised_voltage = 48,
              electrical_ratio = 3)
 # TODO(Brian): Actually measure the inductance.
 MY1020 = Motor(line_line_resistance = 0.650 / 3.77,
                line_line_self_inductance = 0.38e-3,
-               line_line_f_coeff = {1: (0.032025, 0), 7: (0.002429, 1.047198)},
+               line_line_f_coeff = {1: (0.032025, 0), 7: (0.002429, numpy.pi / 3)},
                advertised_rpm = 4500, advertised_voltage = 48,
                electrical_ratio = 3)
 # TODO(Brian): Verify resistance and inductance on a power supply.
 T20 = Motor(phase_resistance = 0.0065,
             phase_self_inductance = 5.0e-6,
-            line_line_f_coeff = {1: (0.006608, 0), 5: (0.000971, -1.570796)},
+            line_line_f_coeff = {1: (0.006608, 0), 5: (0.000971, numpy.pi / -2)},
             advertised_kv = 730, advertised_voltage = 41,
             electrical_ratio = 2)

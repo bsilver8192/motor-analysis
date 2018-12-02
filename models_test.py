@@ -21,7 +21,9 @@ class TestCase(unittest.TestCase):
     return self._theta
 
   def assertFClose(self, a, b, offset=0):
-    if not numpy.allclose(a(self.theta), b(self.theta + offset)):
+    a_points = a(self.theta)
+    b_points = b(self.theta + offset)
+    if (abs(a_points - b_points) > self.epsilon).any():
       raise AssertionError('%r != %r' % (a, b))
 
 class TestCosSum(TestCase):
@@ -53,11 +55,23 @@ class TestCosSum(TestCase):
     with self.subTest(line_line=f):
       from_line_line = models.CosSum(line_line = f)
       from_phase = models.CosSum(phase = from_line_line.phase_coeff)
+
+      self.assertAlmostEqual(from_line_line.line_line_coeff[1][1], -numpy.pi / 2)
+      self.assertAlmostEqual(from_line_line.phase_coeff[1][1], -numpy.pi / 2)
+      self.assertAlmostEqual(from_phase.line_line_coeff[1][1], -numpy.pi / 2)
+      self.assertAlmostEqual(from_phase.phase_coeff[1][1], -numpy.pi / 2)
+
       self.assertEqualRotated(from_phase.line_line, from_line_line.line_line)
       self.assertEqualRotated(from_line_line.phase, from_phase.phase)
     with self.subTest(phase=f):
       from_phase = models.CosSum(phase = f)
       from_line_line = models.CosSum(line_line = from_phase.line_line_coeff)
+
+      self.assertAlmostEqual(from_line_line.line_line_coeff[1][1], -numpy.pi / 2)
+      self.assertAlmostEqual(from_line_line.phase_coeff[1][1], -numpy.pi / 2)
+      self.assertAlmostEqual(from_phase.line_line_coeff[1][1], -numpy.pi / 2)
+      self.assertAlmostEqual(from_phase.phase_coeff[1][1], -numpy.pi / 2)
+
       self.assertEqualRotated(from_phase.line_line, from_line_line.line_line)
       self.assertEqualRotated(from_line_line.phase, from_phase.phase)
 
@@ -70,26 +84,34 @@ class TestCosSum(TestCase):
   def test_two_cos(self):
     self.check_phase_line_line_conversions({1: (1, 0), 5: (0.5, 0.23)})
     self.check_phase_line_line_conversions({1: (0.1, 0), 5: (0.5, 0.23)})
-    self.check_phase_line_line_conversions({5: (0.1, 0), 7: (0.5, 0.23)})
+    self.check_phase_line_line_conversions({1: (0.05, 3), 5: (0.1, 0), 7: (0.5, 0.23)})
 
   def test_many_cos(self):
     self.check_phase_line_line_conversions({1: (1, 0), 5: (0.5, 0.23),
                                             7: (0.1, 0.3)})
 
-class TestFunctions(TestCase):
+class TestWaveforms(TestCase):
   '''A sanity test of various commutation patterns we define. This verifies
   they are continuous and all three phases add up to a constant.
 
   This is helpful for checking that they're not mirrored or anything silly.'''
 
-  def assertFunction(self, f):
+  def assertWaveform(self, f):
     '''Asserts that f meets the minimum requirements for being a voltage
     waveform, current waveform, or flux linkage derivative.
 
     Note that most of this doesn't matter in theory, but we want it to be true
-    for all the functions we use to remove unnecessary DOFs in the definitions
+    for all the waveforms we use to remove unnecessary DOFs in the definitions
     and make subsequent math less confusing.'''
-    self.assertGreater(max(f(self.theta)) - min(f(self.theta)), 0.5)
+
+    # Validate our assumptions around how min is calculated.
+    self.assertLess(f.min, 0)
+    self.assertGreater(f.max, self.epsilon)
+    all_points = numpy.concatenate((f(self.theta), f(self.theta - self.epsilon / 2)))
+    self.assertAlmostEqual(f.min, min(all_points), places=4)
+    self.assertAlmostEqual(f.max, max(all_points), places=4)
+    self.assertGreater(f(numpy.pi / 2), 0)
+
     with self.subTest('isPeriodic', f=f):
       self.assertFClose(f, f, numpy.pi * 2)
       self.assertFClose(f, f, numpy.pi * 4)
@@ -97,7 +119,7 @@ class TestFunctions(TestCase):
       # Note that this deliberately verifies it has odd symmetry about pi, and
       # not some other point.
       self.assertFClose(f, lambda t: -f(numpy.pi * 2 - t))
-    # We don't actually need the function to have zeros. We just need it to
+    # We don't actually need the waveform to have zeros. We just need it to
     # average zero about the interesting points, to make sure it's properly
     # aligned.
     for point in (0, numpy.pi, numpy.pi * 2):
@@ -130,19 +152,37 @@ class TestFunctions(TestCase):
     self.assertFClose(all_three, lambda _: 0)
 
   def testTrapezoid(self):
-    self.assertFunction(models.trapezoid)
+    self.assertWaveform(models.trapezoid)
     self.assertContinuous(models.trapezoid)
 
   def testTrapezoid6Step(self):
-    self.assertFunction(models.trapezoid_6step)
+    self.assertWaveform(models.trapezoid_6step)
+    self.assertConstant(models.trapezoid_6step, models.trapezoid_6step)
 
   def testTrapezoid4Step(self):
-    self.assertFunction(models.trapezoid_4step)
+    self.assertWaveform(models.trapezoid_4step)
     self.assertConstant(models.trapezoid_4step, models.trapezoid)
     self.assertConstant(models.trapezoid_4step, models.trapezoid_4step)
 
   def testSquare(self):
-    self.assertFunction(models.square)
+    self.assertWaveform(models.square)
+
+  def testSin(self):
+    self.assertWaveform(models.sin)
+    self.assertContinuous(models.sin)
+    self.assertConstant(models.sin, models.sin)
+
+  def testSinConstant(self):
+    one_offset = -numpy.pi / 2
+    self.assertFClose(numpy.sin, models.CosSum.make_function({1: (1, one_offset)}))
+    for coeff in ({1: (1, one_offset)}, {1: (0.01, one_offset)},
+                  {1: (1, one_offset), 5: (0.05, one_offset - numpy.pi)},
+                  {1: (1, one_offset), 7: (0.05, one_offset - numpy.pi)}):
+      with self.subTest(coeff=coeff):
+        sin_constant = models.make_sin_constant(coeff)
+        self.assertWaveform(sin_constant)
+        self.assertContinuous(sin_constant)
+        self.assertConstant(sin_constant, models.CosSum.make_function(coeff))
 
 if __name__ == '__main__':
   unittest.main()
