@@ -1,3 +1,9 @@
+'''This module has models of various aspects of motors and control algorithms.
+
+These models are all simple linear/sinusoidal functions at runtime. There is
+some moderately more complex math at initialization time, but everything in this
+module is simple at runtime.'''
+
 import numpy
 import scipy.optimize
 import types
@@ -64,7 +70,7 @@ class CosSum(object):
     return r
 
 class Motor(object):
-  '''Represents one type of motor.
+  r'''Represents one type of motor.
 
   This currently only supports motors with flux linkages which are well-modeled
   as sums of sinusoids, but the API is designed to support other shapes in the
@@ -74,7 +80,9 @@ class Motor(object):
   All constants are in standard SI units (specifically: volts, seconds,
   newton*meters, amps, and ohms).
 
-  The mutual inductance is assumed to be negligible.
+  The mutual inductance is assumed to be 0. This is true by definition for
+  wye-connected motors (with floating neutral) due to the linear dependence
+  between the phase currents.
 
   Flux linkage coefficients are represented as a mapping from a to (b, c) such
   that the final function is $\sum b * cos(a * \theta + c)$.
@@ -89,7 +97,7 @@ class Motor(object):
   '''
   def __init__(self,
                phase_resistance = None, line_line_resistance = None,
-               line_line_f_coeff = None,
+               phase_f_coeff = None, line_line_f_coeff = None,
                phase_self_inductance = None, line_line_self_inductance = None,
                advertised_rpm = None, advertised_voltage = None,
                advertised_kv = None,
@@ -116,7 +124,9 @@ class Motor(object):
     else:
       raise ValueError('Must specify the inductance')
 
-    if line_line_f_coeff is not None:
+    if phase_f_coeff is not None:
+      self._f = CosSum(phase = phase_f_coeff)
+    elif line_line_f_coeff is not None:
       self._f = CosSum(line_line = line_line_f_coeff)
     else:
       raise ValueError('Must specify the flux linkage')
@@ -182,7 +192,7 @@ class Waveform(object):
   def __init__(self, scalar_f):
     self.__doc__ = scalar_f.__doc__
     self._f = _vectorize_float(scalar_f)
-    one_sixth_min = min(self._f(numpy.arange(0, numpy.pi * 2, numpy.pi / 6)))
+    one_sixth_min = min(self._f(numpy.linspace(0, numpy.pi * 2, 12)))
     continuous_min = scipy.optimize.minimize(self._f,
                                              x0=(numpy.pi * 3 / 2),
                                              bounds=((numpy.pi, numpy.pi * 2),))

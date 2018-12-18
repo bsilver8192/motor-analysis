@@ -23,8 +23,25 @@ class TestCase(unittest.TestCase):
   def assertFClose(self, a, b, offset=0):
     a_points = a(self.theta)
     b_points = b(self.theta + offset)
-    if (abs(a_points - b_points) > self.epsilon).any():
+    if (abs(a_points - b_points) > self.epsilon / 100).any():
       raise AssertionError('%r != %r' % (a, b))
+
+  def assertPeriodicSymmetric(self, f):
+    with self.subTest('isPeriodic', f=f):
+      self.assertFClose(f, f, numpy.pi * 2)
+      self.assertFClose(f, f, numpy.pi * 4)
+    with self.subTest('isOddSymmetric', f=f):
+      # Note that this deliberately verifies it has odd symmetry about pi,
+      # and not some other point.
+      self.assertFClose(f, lambda t: -f(numpy.pi * 2 - t))
+    # We don't actually need the waveform to have zeros. We just need it
+    # to average zero about the interesting points, to make sure it's
+    # properly aligned.
+    for point in (0, numpy.pi, numpy.pi * 2):
+      with self.subTest('zeros', f=f, point=point):
+        before = f(point - self.epsilon)
+        after = f(point + self.epsilon)
+        self.assertAlmostEqual((before + after) / 2, 0)
 
 class TestCosSum(TestCase):
   '''A sanity test of the CosSum functionality. This mostly just makes sure that
@@ -98,21 +115,7 @@ class TestCosSum(TestCase):
       with self.subTest('symmetries', coeff=coeff):
         cos_sum = models.CosSum(phase=coeff)
         for f in (cos_sum.phase, cos_sum.line_line):
-          with self.subTest('isPeriodic', f=f):
-            self.assertFClose(f, f, numpy.pi * 2)
-            self.assertFClose(f, f, numpy.pi * 4)
-          with self.subTest('isOddSymmetric', f=f):
-            # Note that this deliberately verifies it has odd symmetry about pi,
-            # and not some other point.
-            self.assertFClose(f, lambda t: -f(numpy.pi * 2 - t))
-          # We don't actually need the waveform to have zeros. We just need it
-          # to average zero about the interesting points, to make sure it's
-          # properly aligned.
-          for point in (0, numpy.pi, numpy.pi * 2):
-            with self.subTest('zeros', f=f, point=point):
-              before = f(point - self.epsilon)
-              after = f(point + self.epsilon)
-              self.assertAlmostEqual((before + after) / 2, 0)
+          self.assertPeriodicSymmetric(f)
 
 class TestWaveforms(TestCase):
   '''A sanity test of various commutation patterns we define. This verifies
@@ -136,21 +139,7 @@ class TestWaveforms(TestCase):
     self.assertAlmostEqual(f.max, max(all_points), places=4)
     self.assertGreater(f(numpy.pi / 2), 0)
 
-    with self.subTest('isPeriodic', f=f):
-      self.assertFClose(f, f, numpy.pi * 2)
-      self.assertFClose(f, f, numpy.pi * 4)
-    with self.subTest('isOddSymmetric', f=f):
-      # Note that this deliberately verifies it has odd symmetry about pi, and
-      # not some other point.
-      self.assertFClose(f, lambda t: -f(numpy.pi * 2 - t))
-    # We don't actually need the waveform to have zeros. We just need it to
-    # average zero about the interesting points, to make sure it's properly
-    # aligned.
-    for point in (0, numpy.pi, numpy.pi * 2):
-      with self.subTest('zeros', f=f, point=point):
-        before = f(point - self.epsilon)
-        after = f(point + self.epsilon)
-        self.assertAlmostEqual((before + after) / 2, 0)
+    self.assertPeriodicSymmetric(f)
 
   def assertContinuous(self, f):
     '''Asserts that f is continuous. This is true for some waveforms, but not
