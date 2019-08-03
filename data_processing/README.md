@@ -16,6 +16,5 @@ Details on the motor are at
 
 This is a Turnigy Aquastar T20 motor. Raw data is three scope channels on each
 phase while spinning the motor.
-The fourth channel in the data is the index pulse on an encoder on the shaft.
 Details on the motor are at
 <http://forum.teamlazygecko.com/viewtopic.php?f=18&t=5&p=104#p109>.

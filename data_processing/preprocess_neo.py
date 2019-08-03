@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
 # Input format: Two header lines.
-# Data lines: relative_time,voltage_a,voltage_b,voltage_c,encoder_index
-# Subtracts voltage_a and voltage_b to get a line-to-line voltage.
+# Data lines: time,voltage,
+# The one voltage is between two phases.
 
 import csv
 import sys
@@ -19,5 +19,4 @@ with open(sys.argv[1], 'r') as in_file:
       if start_time is None:
         start_time = float(row[0])
       relative_time = float(row[0]) - start_time
-      voltage_a, voltage_b = float(row[1]), float(row[2])
-      writer.writerow(('{0:.6f}'.format(relative_time), voltage_a - voltage_b))
+      writer.writerow(('{0:.6f}'.format(relative_time), float(row[1])))

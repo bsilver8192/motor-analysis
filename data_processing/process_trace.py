@@ -21,19 +21,20 @@ def approximate(fft, num):
   return numpy.fft.irfft(fft), max(biggest_indices)
 
 zero_noise = 0.15
+max_zero_size = 40
 def find_zero_crossing(start):
   '''Returns the index into data of the first zero crossing after start.'''
   i = start
   while data[i] > 0:
     i += 1
-  i += 20
+  i += max_zero_size
   while data[i] < -zero_noise:
     i += 1
   start = i
   while data[i] < zero_noise:
     i += 1
   end = i
-  assert end - start < 20
+  assert end - start < max_zero_size
   return (end + start) // 2
 
 round_angle_multiple = numpy.pi / 6
