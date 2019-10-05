@@ -69,6 +69,9 @@ class CosSum(object):
       return b * numpy.cos(a * theta + c)
     return r
 
+_RPM_TO_RAD_S = numpy.pi * 2 / 60
+"""RPM / (rad/s)"""
+
 class Motor(object):
   r'''Represents one type of motor.
 
@@ -131,14 +134,16 @@ class Motor(object):
     else:
       raise ValueError('Must specify the flux linkage')
 
-    rpm_to_omega = numpy.pi * 2 / 60 * electrical_ratio
+    assert self._f.phase_coeff == _offset_coeff(self._f.phase_coeff)
+    assert self._f.line_line_coeff == _offset_coeff(self._f.line_line_coeff)
+
     if advertised_rpm is not None:
-      self._advertised_omega = advertised_rpm * rpm_to_omega
+      self._advertised_omega = advertised_rpm * _RPM_TO_RAD_S * electrical_ratio
     else:
       self._advertised_omega = None
     self._advertised_voltage = advertised_voltage
     if advertised_kv is not None:
-      self._advertised_kv = advertised_kv * rpm_to_omega
+      self._advertised_kv = advertised_kv * _RPM_TO_RAD_S * electrical_ratio
     else:
       self._advertised_kv = None
 
@@ -180,6 +185,17 @@ class Motor(object):
   @property
   def electrical_ratio(self):
     return self._electrical_ratio
+
+  def __repr__(self):
+    return 'Motor(%s)' % ', '.join([
+        'phase_resistance=%f' % self.resistance,
+        'phase_f_coeff=%r' % dict(self.f_coeff),
+        'phase_self_inductance=%f' % self.self_inductance,
+        'advertised_omega=%r' % self._advertised_omega,
+        'advertised_voltage=%r' % self._advertised_voltage,
+        'advertised_kv=%r' % self._advertised_kv,
+        'electrical_ratio=%f' % self.electrical_ratio,
+        ])
 
 def _cos_harmonic(cos_scalar, harmonic_scalar, harmonic_index, harmonic_offset):
   def r(theta):
@@ -289,8 +305,8 @@ sin = Waveform(numpy.sin)
 
 def make_sin_constant(coeff):
   '''Returns a Waveform which will produce constant torque for the given motor
-  waveform. Passing motor_coeff=Motor.f_coeff often makes sense.'''
-  orig_coeff = _frozendict(coeff)
+  waveform. Passing coeff=Motor.f_coeff often makes sense.'''
+  assert coeff == _offset_coeff(coeff)
   coeff = dict(coeff)
   assert len(coeff) <= 2
   for i in sorted(coeff.keys())[1:]:
