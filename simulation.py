@@ -26,7 +26,7 @@ out to a voltage to bound it) or a voltage waveform (used to calculate a current
 waveform to calculate torque).
 
 We ignore the PWM switching effects. At steady state, and assuming the switching
-is much faster than the motors rotation, it doesn't matter. It's possible to
+is much faster than the motor's rotation, it doesn't matter. It's possible to
 make any shape, and a maximum duty cycle is effectively a reduction in the
 input voltage. Even if the duty cycle vs average voltage is non-linear, it still
 doesn't affect the simulations we're doing here, because we're not attempting to
@@ -35,6 +35,9 @@ test controls algorithms which actually drive the currents/voltages we simulate.
 We model the relative efficiency of different gearing choices with a simple
 multipler of the torque. This should be sufficient to capture tradeoffs between
 one and two reductions, for example.
+
+All signs are positive for operation in quadrant I (motoring).
+TODO(Brian): Define sign conventions for all quantities for the other quadrants.
 '''
 
 import numpy
@@ -92,14 +95,21 @@ class OperatingPoint(object):
   ----------
   omega : float
       The speed of the motor in rad/s.
-  motor_power : float
+  rms_motor_power : float
       The RMS power dissipated in the motor in W.
+  rms_output_power : float
+      The RMS output power in W.
+  average_motor_power : float
+      The average power dissipated in the motor in W.
   torque : float
       The average torque (for all phases) in N*m.
   """
-  def __init__(self, omega, motor_power, torque):
+  def __init__(self, omega, rms_motor_power, rms_output_power,
+               average_motor_power, torque):
     self._omega = omega
-    self._motor_power = motor_power
+    self._rms_motor_power = rms_motor_power
+    self._rms_output_power = rms_output_power
+    self._average_motor_power = average_motor_power
     self._torque = torque
 
   @property
@@ -107,25 +117,48 @@ class OperatingPoint(object):
     return self._omega
 
   @property
-  def input_power(self):
-    """Calculates the power fed into the motor controller.
+  def rms_input_power(self):
+    """Calculates the RMS power fed into the motor controller.
+
+    This is what heats up a fuse.
 
     Returns
     -------
     float
         The RMS input power in W.
     """
-    return self.motor_power + self.output_power
+    return self.rms_motor_power + self.rms_output_power
+
+  @property
+  def average_input_power(self):
+    """Calculates the average power fed into the motor controller.
+
+    This is what discharges a battery.
+
+    Returns
+    -------
+    float
+        The average input power in W.
+    """
+    return self.average_motor_power + self.average_output_power
 
   @property
   def torque(self):
     return self._torque
 
   @property
-  def motor_power(self):
-    return self._motor_power
+  def rms_motor_power(self):
+    return self._rms_motor_power
 
-  def input_current(self, input_voltage):
+  @property
+  def rms_output_power(self):
+    return self._rms_output_power
+
+  @property
+  def average_motor_power(self):
+    return self._average_motor_power
+
+  def rms_input_current(self, input_voltage):
     """
     Arguments
     ---------
@@ -137,10 +170,10 @@ class OperatingPoint(object):
     float
         The input current (in A).
     """
-    return self.input_power / input_voltage
+    return self.rms_input_power / input_voltage
 
   @property
-  def output_power(self):
+  def average_output_power(self):
     """
     Returns
     -------
@@ -157,7 +190,7 @@ class OperatingPoint(object):
     float
         The efficiency, in [0, 1].
     """
-    return self.output_power / (self.input_power + self.output_power)
+    return self.average_output_power / (self.rms_input_power + self.average_output_power)
 
 class MotorController(object):
   """

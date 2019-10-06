@@ -18,7 +18,8 @@ class SimpleController(simulation.MotorController):
     self._unit_average_torque = simulation.average_circle(torque) * 3
     self._unit_rms_torque = numpy.sqrt(
         simulation.average_circle(lambda t: torque(t)**2)) * 3
-    self._unit_average_current = simulation.average_circle(self.phase_g)
+    self._unit_average_current = simulation.average_circle(
+        lambda t: numpy.abs(self.phase_g(t)))
     self._unit_rms_current = simulation.rms_circle(self.phase_g)
 
     thetas = numpy.linspace(0, numpy.pi * 2, 1000)
@@ -60,6 +61,8 @@ class SimpleController(simulation.MotorController):
     if max_input_power is not None:
       # input_power = unit_mechanical_power*x + unit_electrical_power*x^2
       # 0 = unit_electrical * x^2 + unit_mechanical * x + -input_power
+      # Then, use the quadratic formula.
+      # TODO(Brian): Use the other solution for motor braking.
       new_scale = ((-unit_rms_mechanical_power +
                     numpy.sqrt(unit_rms_mechanical_power ** 2 -
                                4 * unit_rms_electrical_power * -max_input_power)) /
@@ -68,8 +71,10 @@ class SimpleController(simulation.MotorController):
 
     if max_voltage is not None:
       bemf_voltage = omega / self.max_speed()
-      assert bemf_voltage <= max_voltage, 'braking not supported yet'
+      assert bemf_voltage <= max_voltage, 'TODO(Brian): braking not supported yet'
       current_scale = min(current_scale, (max_voltage - bemf_voltage) / self._unit_voltage)
+
+    assert current_scale < numpy.inf, 'Need to specify at least one limit'
 
     rms_motor_power = unit_rms_electrical_power * current_scale**2
     rms_output_power = unit_rms_mechanical_power * current_scale
