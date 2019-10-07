@@ -67,6 +67,9 @@ _CONTROLLERS = (
     )
 
 class SimpleControllerTest(unittest.TestCase):
+  def assertGreaterAlmostEqual(self, a, b):
+    self.assertGreaterEqual(round(a, 7), round(b, 7))
+
   def test_max_torque(self):
     for controller in _CONTROLLERS:
       with self.subTest(controller=controller):
@@ -102,9 +105,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(stall_low.average_output_power, 0)
         self.assertEqual(stall_low.rms_output_power, 0)
         self.assertGreater(stall_low.average_motor_power, 0)
-        self.assertEqual(stall_low.rms_input_power, stall_low.rms_motor_power)
         self.assertEqual(stall_low.average_input_power, stall_low.average_motor_power)
-        self.assertGreaterEqual(stall_low.rms_input_power, stall_low.average_input_power)
+        self.assertGreaterAlmostEqual(stall_low.rms_input_power, stall_low.average_input_power)
 
         stall_high = controller.operating_point(0, max_torque = 1000)
         self.assertEqual(stall_high.omega, 0)
@@ -116,9 +118,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(stall_high.average_output_power, 0)
         self.assertEqual(stall_high.rms_output_power, 0)
         self.assertGreater(stall_high.average_motor_power, 0)
-        self.assertEqual(stall_high.rms_input_power, stall_high.rms_motor_power)
         self.assertEqual(stall_high.average_input_power, stall_high.average_motor_power)
-        self.assertGreaterEqual(stall_high.rms_input_power, stall_high.average_input_power)
+        self.assertGreaterAlmostEqual(stall_high.rms_input_power, stall_high.average_input_power)
 
         fast_low = controller.operating_point(10000, max_torque = 0.001)
         self.assertEqual(fast_low.omega, 10000)
@@ -130,10 +131,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertGreater(fast_low.average_output_power, 0)
         self.assertGreater(fast_low.rms_output_power, 0)
         self.assertGreater(fast_low.average_motor_power, 0)
-        self.assertGreaterEqual(fast_low.rms_output_power, fast_low.average_output_power)
-        self.assertGreaterEqual(fast_low.rms_input_power, fast_low.average_input_power)
-        self.assertEqual(fast_low.rms_input_power,
-                         fast_low.rms_motor_power + fast_low.rms_output_power)
+        self.assertGreaterAlmostEqual(fast_low.rms_output_power, fast_low.average_output_power)
+        self.assertGreaterAlmostEqual(fast_low.rms_input_power, fast_low.average_input_power)
         self.assertEqual(fast_low.average_input_power,
                          fast_low.average_motor_power + fast_low.average_output_power)
 
@@ -146,10 +145,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertGreater(fast_high.rms_input_current(1), 0)
         self.assertGreater(fast_high.average_output_power, 0)
         self.assertGreater(fast_high.average_motor_power, 0)
-        self.assertGreaterEqual(fast_high.rms_output_power, fast_high.average_output_power)
-        self.assertGreaterEqual(fast_high.rms_input_power, fast_high.average_input_power)
-        self.assertEqual(fast_high.rms_input_power,
-                         fast_high.rms_motor_power + fast_high.rms_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_output_power, fast_high.average_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_input_power, fast_high.average_input_power)
         self.assertEqual(fast_high.average_input_power,
                          fast_high.average_motor_power + fast_high.average_output_power)
 
@@ -196,9 +193,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(stall_low.average_output_power, 0)
         self.assertEqual(stall_low.rms_output_power, 0)
         self.assertGreater(stall_low.average_motor_power, 0)
-        self.assertEqual(stall_low.rms_input_power, stall_low.rms_motor_power)
         self.assertEqual(stall_low.average_input_power, stall_low.average_motor_power)
-        self.assertGreaterEqual(stall_low.rms_input_power, stall_low.average_input_power)
+        self.assertGreaterAlmostEqual(stall_low.rms_input_power, stall_low.average_input_power)
 
         stall_high = controller.operating_point(0, max_motor_current = 1000)
         self.assertEqual(stall_high.omega, 0)
@@ -211,9 +207,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(stall_high.average_output_power, 0)
         self.assertEqual(stall_high.rms_output_power, 0)
         self.assertGreater(stall_high.average_motor_power, 0)
-        self.assertEqual(stall_high.rms_input_power, stall_high.rms_motor_power)
         self.assertEqual(stall_high.average_input_power, stall_high.average_motor_power)
-        self.assertGreaterEqual(stall_high.rms_input_power, stall_high.average_input_power)
+        self.assertGreaterAlmostEqual(stall_high.rms_input_power, stall_high.average_input_power)
 
         fast_low = controller.operating_point(10000, max_motor_current = 0.001)
         self.assertEqual(fast_low.omega, 10000)
@@ -226,10 +221,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertGreater(fast_low.average_output_power, 0)
         self.assertGreater(fast_low.rms_output_power, 0)
         self.assertGreater(fast_low.average_motor_power, 0)
-        self.assertGreaterEqual(fast_low.rms_output_power, fast_low.average_output_power)
-        self.assertGreaterEqual(fast_low.rms_input_power, fast_low.average_input_power)
-        self.assertEqual(fast_low.rms_input_power,
-                         fast_low.rms_motor_power + fast_low.rms_output_power)
+        self.assertGreaterAlmostEqual(fast_low.rms_output_power, fast_low.average_output_power)
+        self.assertGreaterAlmostEqual(fast_low.rms_input_power, fast_low.average_input_power)
         self.assertEqual(fast_low.average_input_power,
                          fast_low.average_motor_power + fast_low.average_output_power)
 
@@ -243,10 +236,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertGreater(fast_high.rms_input_current(1), 0)
         self.assertGreater(fast_high.average_output_power, 0)
         self.assertGreater(fast_high.average_motor_power, 0)
-        self.assertGreaterEqual(fast_high.rms_output_power, fast_high.average_output_power)
-        self.assertGreaterEqual(fast_high.rms_input_power, fast_high.average_input_power)
-        self.assertEqual(fast_high.rms_input_power,
-                         fast_high.rms_motor_power + fast_high.rms_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_output_power, fast_high.average_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_input_power, fast_high.average_input_power)
         self.assertEqual(fast_high.average_input_power,
                          fast_high.average_motor_power + fast_high.average_output_power)
 
@@ -287,28 +278,26 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertAlmostEqual(stall_low.rms_input_power, 0.001)
         self.assertGreater(stall_low.average_input_power, 0)
         self.assertGreater(stall_low.torque, 0)
-        self.assertAlmostEqual(stall_low.rms_motor_power, 0.001)
+        self.assertGreater(stall_low.rms_motor_power, 0)
         self.assertGreater(stall_low.rms_input_current(1), 0)
         self.assertEqual(stall_low.average_output_power, 0)
         self.assertEqual(stall_low.rms_output_power, 0)
         self.assertGreater(stall_low.average_motor_power, 0)
-        self.assertEqual(stall_low.rms_input_power, stall_low.rms_motor_power)
         self.assertEqual(stall_low.average_input_power, stall_low.average_motor_power)
-        self.assertGreaterEqual(stall_low.rms_input_power, stall_low.average_input_power)
+        self.assertGreaterAlmostEqual(stall_low.rms_input_power, stall_low.average_input_power)
 
         stall_high = controller.operating_point(0, max_input_power = 1000)
         self.assertEqual(stall_high.omega, 0)
         self.assertAlmostEqual(stall_high.rms_input_power, 1000)
         self.assertGreater(stall_high.average_input_power, 0)
         self.assertGreater(stall_high.torque, 0)
-        self.assertAlmostEqual(stall_high.rms_motor_power, 1000)
+        self.assertGreater(stall_high.rms_motor_power, 0)
         self.assertGreater(stall_high.rms_input_current(1), 0)
         self.assertEqual(stall_high.average_output_power, 0)
         self.assertEqual(stall_high.rms_output_power, 0)
         self.assertGreater(stall_high.average_motor_power, 0)
-        self.assertEqual(stall_high.rms_input_power, stall_high.rms_motor_power)
         self.assertEqual(stall_high.average_input_power, stall_high.average_motor_power)
-        self.assertGreaterEqual(stall_high.rms_input_power, stall_high.average_input_power)
+        self.assertGreaterAlmostEqual(stall_high.rms_input_power, stall_high.average_input_power)
 
         fast_low = controller.operating_point(10000, max_input_power = 0.001)
         self.assertEqual(fast_low.omega, 10000)
@@ -320,10 +309,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertGreater(fast_low.average_output_power, 0)
         self.assertGreater(fast_low.rms_output_power, 0)
         self.assertGreater(fast_low.average_motor_power, 0)
-        self.assertGreaterEqual(fast_low.rms_output_power, fast_low.average_output_power)
-        self.assertGreaterEqual(fast_low.rms_input_power, fast_low.average_input_power)
-        self.assertEqual(fast_low.rms_input_power,
-                         fast_low.rms_motor_power + fast_low.rms_output_power)
+        self.assertGreaterAlmostEqual(fast_low.rms_output_power, fast_low.average_output_power)
+        self.assertGreaterAlmostEqual(fast_low.rms_input_power, fast_low.average_input_power)
         self.assertEqual(fast_low.average_input_power,
                          fast_low.average_motor_power + fast_low.average_output_power)
 
@@ -336,10 +323,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertGreater(fast_high.rms_input_current(1), 0)
         self.assertGreater(fast_high.average_output_power, 0)
         self.assertGreater(fast_high.average_motor_power, 0)
-        self.assertGreaterEqual(fast_high.rms_output_power, fast_high.average_output_power)
-        self.assertGreaterEqual(fast_high.rms_input_power, fast_high.average_input_power)
-        self.assertEqual(fast_high.rms_input_power,
-                         fast_high.rms_motor_power + fast_high.rms_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_output_power, fast_high.average_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_input_power, fast_high.average_input_power)
         self.assertEqual(fast_high.average_input_power,
                          fast_high.average_motor_power + fast_high.average_output_power)
 
@@ -367,7 +352,7 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(stopped.average_motor_power, 0)
 
         '''
-        TODO(Brian): Part of the TODO in MotorController.operating_point.
+        TODO(Brian): Part of the TODO in MotorController.operating_point to handle all quadrants.
         fast_none = controller.operating_point(100, max_voltage = 0)
         self.assertEqual(fast_none.omega, 100)
         self.assertLess(fast_none.rms_input_power, 0)
@@ -392,9 +377,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(stall_low.average_output_power, 0)
         self.assertEqual(stall_low.rms_output_power, 0)
         self.assertGreater(stall_low.average_motor_power, 0)
-        self.assertEqual(stall_low.rms_input_power, stall_low.rms_motor_power)
         self.assertEqual(stall_low.average_input_power, stall_low.average_motor_power)
-        self.assertGreaterEqual(stall_low.rms_input_power, stall_low.average_input_power)
+        self.assertGreaterAlmostEqual(stall_low.rms_input_power, stall_low.average_input_power)
 
         stall_high = controller.operating_point(0, max_voltage = 1000)
         self.assertEqual(stall_high.omega, 0)
@@ -406,12 +390,11 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(stall_high.average_output_power, 0)
         self.assertEqual(stall_high.rms_output_power, 0)
         self.assertGreater(stall_high.average_motor_power, 0)
-        self.assertEqual(stall_high.rms_input_power, stall_high.rms_motor_power)
         self.assertEqual(stall_high.average_input_power, stall_high.average_motor_power)
-        self.assertGreaterEqual(stall_high.rms_input_power, stall_high.average_input_power)
+        self.assertGreaterAlmostEqual(stall_high.rms_input_power, stall_high.average_input_power)
 
         '''
-        TODO(Brian): Part of the TODO in MotorController.operating_point.
+        TODO(Brian): Part of the TODO in MotorController.operating_point to handle all quadrants.
         fast_low = controller.operating_point(10000, max_voltage = 0.01)
         self.assertEqual(fast_low.omega, 10000)
         self.assertLess(fast_low.rms_input_power, 0)
@@ -422,10 +405,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertLess(fast_low.average_output_power, 0)
         self.assertGreater(fast_low.rms_output_power, 0)
         self.assertGreater(fast_low.average_motor_power, 0)
-        self.assertLessEqual(fast_low.rms_output_power, fast_low.average_output_power)
-        self.assertLessEqual(fast_low.rms_input_power, fast_low.average_input_power)
-        self.assertEqual(fast_low.rms_input_power,
-                         fast_low.rms_motor_power + fast_low.rms_output_power)
+        self.assertLessAlmostEqual(fast_low.rms_output_power, fast_low.average_output_power)
+        self.assertLessAlmostEqual(fast_low.rms_input_power, fast_low.average_input_power)
         self.assertEqual(fast_low.average_input_power,
                          fast_low.average_motor_power + fast_low.average_output_power)
         '''
@@ -439,10 +420,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertGreater(fast_high.rms_input_current(1), 0)
         self.assertGreater(fast_high.average_output_power, 0)
         self.assertGreater(fast_high.average_motor_power, 0)
-        self.assertGreaterEqual(fast_high.rms_output_power, fast_high.average_output_power)
-        self.assertGreaterEqual(fast_high.rms_input_power, fast_high.average_input_power)
-        self.assertEqual(fast_high.rms_input_power,
-                         fast_high.rms_motor_power + fast_high.rms_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_output_power, fast_high.average_output_power)
+        self.assertGreaterAlmostEqual(fast_high.rms_input_power, fast_high.average_input_power)
         self.assertEqual(fast_high.average_input_power,
                          fast_high.average_motor_power + fast_high.average_output_power)
 
@@ -456,10 +435,8 @@ class SimpleControllerTest(unittest.TestCase):
         self.assertEqual(free_1v.average_output_power, 0)
         self.assertEqual(free_1v.rms_output_power, 0)
         self.assertEqual(free_1v.average_motor_power, 0)
-        self.assertGreaterEqual(free_1v.rms_output_power, free_1v.average_output_power)
-        self.assertGreaterEqual(free_1v.rms_input_power, free_1v.average_input_power)
-        self.assertEqual(free_1v.rms_input_power,
-                         free_1v.rms_motor_power + free_1v.rms_output_power)
+        self.assertGreaterAlmostEqual(free_1v.rms_output_power, free_1v.average_output_power)
+        self.assertGreaterAlmostEqual(free_1v.rms_input_power, free_1v.average_input_power)
         self.assertEqual(free_1v.average_input_power,
                          free_1v.average_motor_power + free_1v.average_output_power)
 

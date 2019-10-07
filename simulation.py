@@ -50,9 +50,14 @@ def average_circle(f):
 def rms_circle(f):
   return numpy.sqrt(average_circle(lambda t: f(t)**2))
 
+def three_phases(f, theta):
+  offset = numpy.pi * 2 / 3
+  return f(theta) + f(theta + offset) + f(theta - offset)
+
+# TODO(Brian): Is this a good idea in any way?
 def max_circle(f):
   n = 200
-  results = numpy.empty((n,))
+  results = numpy.zeros((n,))
   epsilon = numpy.pi * 2 / n / 2
   i = 0
   for theta in numpy.linspace(0, numpy.pi * 2, n):
@@ -62,7 +67,7 @@ def max_circle(f):
     if result.success:
       results[i] = float(result.x)
     i += 1
-  return f(numpy.nanmin(results))
+  return numpy.nanmax(f(results))
 
 def _differentiate(f, theta):
   """Calculates the first derivative of f at theta.
@@ -99,16 +104,19 @@ class OperatingPoint(object):
       The RMS power dissipated in the motor in W.
   rms_output_power : float
       The RMS output power in W.
+  rms_input_power: float
+      The RMS input power in W.
   average_motor_power : float
       The average power dissipated in the motor in W.
   torque : float
       The average torque (for all phases) in N*m.
   """
   def __init__(self, omega, rms_motor_power, rms_output_power,
-               average_motor_power, torque):
+               rms_input_power, average_motor_power, torque):
     self._omega = omega
     self._rms_motor_power = rms_motor_power
     self._rms_output_power = rms_output_power
+    self._rms_input_power = rms_input_power
     self._average_motor_power = average_motor_power
     self._torque = torque
 
@@ -127,7 +135,7 @@ class OperatingPoint(object):
     float
         The RMS input power in W.
     """
-    return self.rms_motor_power + self.rms_output_power
+    return self._rms_input_power
 
   @property
   def average_input_power(self):
